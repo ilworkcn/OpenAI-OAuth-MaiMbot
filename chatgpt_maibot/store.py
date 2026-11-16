@@ -141,6 +141,16 @@ class CredentialStore:
         data["active_client_id"] = client_id
         self._write_data(data)
 
+    def delete(self, client_id: str) -> None:
+        account = self.account(client_id)
+        if account.get("access_token") or account.get("refresh_token"):
+            raise PluginError("请先退出这个账号，再删除记录。")
+        data = self.read()
+        del data["accounts"][client_id]
+        if data.get("active_client_id") == client_id:
+            data["active_client_id"] = None
+        self._write_data(data)
+
     def clear_tokens(self, client_id: str) -> None:
         account = self.account(client_id)
         for key in TOKEN_KEYS:

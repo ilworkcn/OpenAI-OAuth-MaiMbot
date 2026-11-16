@@ -29,8 +29,17 @@ else:
 class OAuthPlugin(MaiBotPlugin):
     config_model = OAuthConfig
 
+    def __init__(self):
+        super().__init__()
+        self.client = None
+        self.auth = None
+        self.provider = None
+        self.login_report = None
+        self.test_task = None
+
     async def on_load(self):
-        self.client = httpx.AsyncClient(timeout=httpx.Timeout(30, connect=15), follow_redirects=False)
+        self.applied_proxy = self.config.network.proxy_url
+        self.client = httpx.AsyncClient(timeout=httpx.Timeout(30, connect=15), follow_redirects=False, proxy=self.applied_proxy or None)
         self.store = CredentialStore(self.ctx.paths.data_dir)
         self.auth = OpenAIPlanAuth(self.store, self.client, self.config.advanced.oauth_timeout_seconds)
         self.provider = PlanProvider(self.auth, self.client, timeout_seconds=self.config.advanced.request_timeout_seconds)
@@ -43,26 +52,33 @@ class OAuthPlugin(MaiBotPlugin):
         self.ctx.logger.info("%s 已加载，请在插件页面管理账号", APP_NAME)
 
     async def on_unload(self):
-        await self.auth.cancel_login()
+        if self.auth is not None:
+            await self.auth.cancel_login()
         for task in (self.login_report, self.test_task):
             if task:
                 task.cancel()
                 with suppress(asyncio.CancelledError):
                     await task
-        await self.client.aclose()
+        if self.client is not None:
+            await self.client.aclose()
 
     async def on_config_update(self, scope, config_data, version):
-        if scope == "self":
+        if scope == "self" and self.auth is not None:
+            if self.config.network.proxy_url != self.applied_proxy:
+                await self.on_unload()
+                await self.on_load()
+                return
             self.auth.timeout_seconds = self.config.advanced.oauth_timeout_seconds
             self.provider.timeout_seconds = self.config.advanced.request_timeout_seconds
 
     def get_webui_config_schema(self, **kwargs):
         schema = super().get_webui_config_schema(**kwargs)
         schema["sections"]["plugin"].update(title="模型连接", description="账号授权与模型测试请打开插件的「账号与模型」页面。")
+        schema["sections"]["network"].update(title="OpenAI 网络", description="代理只用于访问 OpenAI；宿主模型配置接口仍使用内网连接。")
         schema["sections"]["advanced"].update(title="连接时间", description="默认值适合大多数部署，需要时再调整。", collapsed=True)
         schema["sections"]["host"].update(title="自动添加模型", description="使用宿主原生配置接口保存并重载。同机部署自动读取登录凭据。", collapsed=True)
         schema["layout"] = {"type": "tabs", "tabs": [
-            {"id": "connection", "title": "模型连接", "sections": ["plugin"], "order": 0},
+            {"id": "connection", "title": "模型连接", "sections": ["plugin", "network"], "order": 0},
             {"id": "advanced", "title": "高级设置", "sections": ["host", "advanced"], "order": 1}]}
         return schema
 
@@ -109,10 +125,13 @@ class OAuthPlugin(MaiBotPlugin):
                 await self.login_report
         return {"message": "本次授权已取消。"}
 
-    @API("account", description="切换或退出账号", timeout_ms=90000)
+    @API("account", description="切换、退出或删除账号记录", timeout_ms=90000)
     async def account(self, action: str, client_id: str):
         if self.test_task and not self.test_task.done():
             raise PluginError("模型测试正在运行，结束后再切换账号。")
+        if action == "delete":
+            await self.auth.delete(client_id)
+            return {"message": "已删除这条账号记录。"}
         await self.cancel()
         if action == "switch":
             await self.auth.switch(client_id)
@@ -121,7 +140,7 @@ class OAuthPlugin(MaiBotPlugin):
             confirmed = await self.auth.logout(client_id)
             message = "账号已退出。" if confirmed else "本机已退出。请在 ChatGPT 的用量设置中确认应用连接已断开。"
         else:
-            raise PluginError("请选择切换账号或退出账号。")
+            raise PluginError("请选择切换账号、退出账号或删除记录。")
         self.models = []
         self.test = {"status": "idle"}
         return {"message": message}

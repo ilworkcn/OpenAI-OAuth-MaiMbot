@@ -465,6 +465,12 @@ class OpenAIPlanAuth:
         async with self.store.locked():
             self.store.switch(client_id)
 
+    async def delete(self, client_id: str) -> None:
+        if self._login_task and not self._login_task.done():
+            raise PluginError("请先完成或取消当前授权，再删除账号记录。")
+        async with self.store.locked():
+            self.store.delete(client_id)
+
     async def logout(self, client_id: str | None = None) -> bool:
         await self.cancel_login()
         confirmed = False

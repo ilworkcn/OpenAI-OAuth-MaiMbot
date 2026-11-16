@@ -15,7 +15,7 @@ python -m pip install -r /MaiMBot/plugins/OpenAI-OAuth-MaiMbot/requirements.txt
 ## 在电脑上授权
 
 1. 用浏览器打开 MaiBot WebUI，进入本插件的 **账号与模型**。
-2. 点击 **Continue with ChatGPT → 打开 ChatGPT 授权页**。
+2. 点击 **Continue with ChatGPT**，复制生成的授权链接，在浏览器新标签页打开。
 3. 登录账号，阅读页面说明并选择是否允许本应用使用 ChatGPT 套餐。
 4. 浏览器跳到 `http://127.0.0.1:某个端口/auth/callback?...` 后，复制地址栏中的完整地址。
 5. 回到 MaiBot 页面粘贴地址，点击 **完成连接**。
@@ -45,7 +45,15 @@ python -m pip install -r /MaiMBot/plugins/OpenAI-OAuth-MaiMbot/requirements.txt
 | 模型运行较慢 | 在插件高级设置及 MaiBot 模型任务中一起调高超时 |
 | 插件加载提示缺少模块 | 在 MaiBot 实际使用的 Python 环境安装依赖，然后重新加载插件 |
 
-插件使用 HTTPX，容器可通过 `HTTPS_PROXY`、`HTTP_PROXY` 和 `NO_PROXY` 配置代理。
+### OpenAI 代理
+
+在 **插件配置 → 模型连接 → OpenAI 网络** 填写 HTTP 代理地址，例如 `http://192.168.1.5:7890`。地址应能从容器访问；代理运行在另一台电脑或 NAS 上时，填写其局域网地址。`127.0.0.1` 指容器自身。
+
+代理用于授权交换、令牌刷新、模型列表和模型请求，宿主配置接口继续走内网。保存后网络连接会重新建立，正在进行的授权或测试需要重新开始，已保存账号继续保留。
+
+留空时沿用容器的 `HTTPS_PROXY`、`HTTP_PROXY` 和 `NO_PROXY` 环境变量。浏览器打开授权页使用浏览器自身的网络配置。
+
+若返回 `unsupported_country_region_territory`，表示 OpenAI 拒绝了当前请求来源地区；服务可用范围以 OpenAI 支持的国家与地区及实际返回为准。
 
 ## 自动添加模型
 

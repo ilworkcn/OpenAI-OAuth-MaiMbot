@@ -130,3 +130,70 @@ async def test_native_schema_and_manifest_bindings(plugin):
     for action in page["actions"].values():
         assert action["version"] == "1"
     assert plugin.get_default_config()["plugin"]["config_version"] == manifest["version"]
+
+
+async def test_cleanup_before_load_and_config_update():
+    plugin = OAuthPlugin()
+    plugin.set_plugin_config(plugin.get_default_config())
+    await plugin.on_config_update("self", plugin.get_default_config(), "0.1.1")
+    await plugin.on_unload()
+
+
+def test_manifest_matches_provider_registration():
+    manifest = json.loads(Path("_manifest.json").read_text("utf-8"))
+    assert manifest["plugin_type"] == "provider"
+    for section in ("host_application", "sdk"):
+        assert manifest[section]["min_version"] and manifest[section]["max_version"]
+    declared = manifest["llm_providers"]
+    registered = [{k:v for k,v in item.items() if k != "metadata"} for item in OAuthPlugin().get_llm_providers()]
+    assert declared == registered
+
+
+async def test_openai_proxy_routes_https_and_reconnects(tmp_path):
+    import httpx
+    requests = []
+    async def proxy(reader, writer):
+        requests.append((await reader.readuntil(b"\r\n\r\n")).decode())
+        writer.write(b"HTTP/1.1 502 Test proxy\r\nContent-Length: 0\r\n\r\n")
+        await writer.drain()
+        writer.close()
+        await writer.wait_closed()
+    server = await asyncio.start_server(proxy, "127.0.0.1", 0)
+    address = f"http://127.0.0.1:{server.sockets[0].getsockname()[1]}"
+    plugin = OAuthPlugin()
+    plugin.set_plugin_config(plugin.get_default_config())
+    plugin.config.network.proxy_url = address
+    plugin._set_context(SimpleNamespace(paths=SimpleNamespace(data_dir=str(tmp_path)), logger=logging.getLogger("proxy-test")))
+    try:
+        await plugin.on_load()
+        first = plugin.client
+        host_id = plugin.store.host_id()
+        with pytest.raises(httpx.ProxyError):
+            await first.get("https://api.openai.com/v1/models")
+        assert requests[0].startswith("CONNECT api.openai.com:443 HTTP/1.1")
+        plugin.config.network.proxy_url = ""
+        await plugin.on_config_update("self", plugin.get_default_config(), "0.1.1")
+        assert first.is_closed and plugin.applied_proxy == ""
+        assert plugin.auth.client is plugin.client and plugin.provider.client is plugin.client
+        assert plugin.store.host_id() == host_id
+    finally:
+        await plugin.on_unload()
+        server.close()
+        await server.wait_closed()
+
+
+async def test_delete_failed_account_keeps_current_account_and_models(plugin, env):
+    await save_account(env)
+    env.store.save({"client_id": "failed-client"})
+    plugin.models = [{"slug": "test-model"}]
+    await plugin.account("delete", "failed-client")
+    data = env.store.read()
+    assert "failed-client" not in data["accounts"]
+    assert data["active_client_id"] == CLIENT_ID
+    assert plugin.models == [{"slug": "test-model"}]
+    with pytest.raises(PluginError, match="先退出"):
+        await plugin.account("delete", CLIENT_ID)
+    env.store.clear_tokens(CLIENT_ID)
+    await plugin.account("delete", CLIENT_ID)
+    assert env.store.read()["active_client_id"] is None
+    assert not env.store.read()["accounts"]

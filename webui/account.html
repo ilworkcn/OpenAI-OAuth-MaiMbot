@@ -282,7 +282,10 @@
           </div>
           <div id="pending" hidden>
             <ol class="steps">
-              <li>打开下面的链接，在 ChatGPT 页面选择账号并授权。</li>
+              <li>
+                复制下方授权链接，在 Firefox
+                新标签页粘贴打开，再选择账号并授权。
+              </li>
               <li>
                 最后跳到
                 <code>127.0.0.1</code> 后，复制浏览器地址栏中的完整地址。
@@ -292,13 +295,20 @@
             <p class="note">
               Docker 部署时，最后一页可能显示无法连接。这时直接复制地址栏即可。
             </p>
-            <a
-              id="authorize"
-              class="link-button"
-              target="_blank"
-              rel="noreferrer noopener"
-              >打开 ChatGPT 授权页 ↗</a
-            >
+
+            <label for="authorize-url">授权链接</label>
+            <textarea
+              id="authorize-url"
+              rows="2"
+              readonly
+              spellcheck="false"
+            ></textarea>
+            <div class="buttons">
+              <button class="primary" id="copy-authorize">复制链接，去新标签页授权</button>
+            </div>
+            <p class="muted">
+              点击复制后，按 Ctrl+T 新建标签页，在地址栏粘贴链接并回车。
+            </p>
             <label for="callback">授权后的回调地址（必填）</label
             ><textarea
               id="callback"
@@ -446,6 +456,26 @@
             .forEach((b) => (b.disabled = false));
         }
       }
+      function confirmAccount(message, label, action) {
+        const dialog = document.createElement("dialog");
+        dialog.className = "card";
+        const text = document.createElement("p");
+        text.textContent = message;
+        const buttons = document.createElement("div");
+        buttons.className = "buttons";
+        const cancel = document.createElement("button");
+        cancel.textContent = "取消";
+        cancel.onclick = () => dialog.close();
+        const confirm = document.createElement("button");
+        confirm.textContent = label;
+        confirm.className = "primary";
+        confirm.onclick = () => { dialog.close(); action(); };
+        buttons.append(cancel, confirm);
+        dialog.append(text, buttons);
+        dialog.addEventListener("close", () => dialog.remove());
+        document.body.append(dialog);
+        dialog.showModal();
+      }
       function accountRow(item, active) {
         const row = document.createElement("div");
         row.className = "account-row";
@@ -477,9 +507,16 @@
           const b = document.createElement("button");
           b.textContent = "退出账号";
           b.onclick = () => {
-            if (confirm("退出这个 ChatGPT 账号？"))
-              run("account", { action: "logout", client_id: item.client_id });
+            confirmAccount("退出这个 ChatGPT 账号？", "退出账号", () =>
+              run("account", { action: "logout", client_id: item.client_id }));
           };
+          actions.append(b);
+        }
+        if (!item.connected) {
+          const b = document.createElement("button");
+          b.textContent = "删除记录";
+          b.onclick = () => confirmAccount("删除这条已退出的账号记录？之后可重新授权添加。", "删除记录", () =>
+            run("account", { action: "delete", client_id: item.client_id }));
           actions.append(b);
         }
         row.append(actions);
@@ -500,8 +537,7 @@
             : "尚未连接";
         $("login-message").textContent = state.login.message;
         $("pending").hidden = state.login.status !== "waiting";
-        if (state.login.url) $("authorize").href = state.login.url;
-        else $("authorize").removeAttribute("href");
+        $("authorize-url").value = state.login.url || "";
         $("accounts").replaceChildren(
           ...accounts.map((a) =>
             accountRow(a, a.client_id === state.accounts.active_client_id),
@@ -556,6 +592,22 @@
             " 秒\n" +
             (t.status === "success" ? t.text : t.message);
       }
+      async function copyField(id) {
+        const field = $(id);
+        field.focus();
+        field.select();
+        // 内网 HTTP 和宿主 iframe 使用点击事件内的复制操作。
+        if (document.execCommand("copy")) return true;
+        if (navigator.clipboard) {
+          try { await navigator.clipboard.writeText(field.value); return true; } catch {}
+        }
+        return false;
+      }
+      $("copy-authorize").onclick = async () => {
+        say(await copyField("authorize-url")
+          ? "授权链接已复制。按 Ctrl+T 新建标签页，粘贴后回车。"
+          : "授权链接已选中。按 Ctrl+C 复制，再粘贴到新标签页。");
+      };
       $("resume").onclick = () => run("resume");
       $("login").onclick = () => run("login");
       $("new").onclick = () => run("login", { new: true });
@@ -644,14 +696,7 @@
           say("请先生成配置片段。");
           return;
         }
-        try {
-          await navigator.clipboard.writeText($("example-text").value);
-          say("配置已复制。");
-        } catch {
-          $("example-text").focus();
-          $("example-text").select();
-          say("配置已选中，按 Ctrl+C 复制。");
-        }
+        say(await copyField("example-text") ? "配置已复制。" : "配置已选中，按 Ctrl+C 复制。");
       };
       await refresh().catch((e) => say(e.message));
       setInterval(renderTime, 1000);
