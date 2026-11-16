@@ -218,3 +218,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# 本机授权与运行数据
+accounts.json
+host_id.txt
+credentials.lock
+config.toml
+.venv/
+dist/

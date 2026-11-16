@@ -1,0 +1,4 @@
+-r requirements.txt
+maibot-plugin-sdk>=2.23,<3
+pytest>=8
+pytest-asyncio>=0.24

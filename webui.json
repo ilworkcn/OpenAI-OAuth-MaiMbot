@@ -1,0 +1,98 @@
+{
+  "schema_version": 2,
+  "required_capabilities": [
+    "custom_pages"
+  ],
+  "workspace_title": "OpenAI OAuth · 账号连接",
+  "pages": [
+    {
+      "id": "account",
+      "title": "账号与模型",
+      "mode": "custom",
+      "icon": "settings",
+      "entry": "webui/account.html",
+      "layout": "document",
+      "queries": {
+        "status": {
+          "api": "status",
+          "version": "1",
+          "parameters": {}
+        }
+      },
+      "actions": {
+        "login": {
+          "api": "login",
+          "version": "1",
+          "parameters": {
+            "new": {
+              "type": "boolean"
+            },
+            "consent": {
+              "type": "boolean"
+            }
+          }
+        },
+        "callback": {
+          "api": "callback",
+          "version": "1",
+          "parameters": {
+            "url": {
+              "type": "string",
+              "required": true,
+              "max_length": 8192
+            }
+          }
+        },
+        "cancel": {
+          "api": "cancel",
+          "version": "1",
+          "parameters": {}
+        },
+        "account": {
+          "api": "account",
+          "version": "1",
+          "parameters": {
+            "action": {
+              "type": "string",
+              "required": true
+            },
+            "client_id": {
+              "type": "string",
+              "required": true
+            }
+          }
+        },
+        "models": {
+          "api": "models",
+          "version": "1",
+          "parameters": {}
+        },
+        "test": {
+          "api": "test",
+          "version": "1",
+          "parameters": {
+            "model": {
+              "type": "string",
+              "required": true
+            }
+          }
+        },
+        "example": {
+          "api": "example",
+          "version": "1",
+          "parameters": {
+            "model": {
+              "type": "string",
+              "required": true
+            }
+          }
+        },
+        "resume": {
+          "api": "resume",
+          "version": "1",
+          "parameters": {}
+        }
+      }
+    }
+  ]
+}

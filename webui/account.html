@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>账号与模型</title>
+    <style>
+      :root {
+        font-family: system-ui, "Microsoft YaHei", sans-serif;
+        color: #393d37;
+        background: #f5f3eb;
+        color-scheme: light;
+        --line: #d8dccf;
+        --paper: #fffef9;
+        --muted: #73796c;
+        --green: #3e6957;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        max-width: 1180px;
+        margin-inline: auto;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 22px;
+      }
+      h1 {
+        font-size: 25px;
+        letter-spacing: -0.5px;
+        margin: 0 0 6px;
+      }
+      h2 {
+        font-size: 17px;
+        margin: 0;
+      }
+      p {
+        line-height: 1.65;
+        margin: 9px 0;
+      }
+      .muted,
+      small {
+        color: var(--muted);
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(290px, 0.9fr) minmax(380px, 1.25fr);
+        gap: 18px;
+        align-items: start;
+      }
+      .stack {
+        display: grid;
+        gap: 18px;
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--paper);
+        padding: 20px;
+        box-shadow: 0 3px 12px #283e2410;
+      }
+      .head {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .badge {
+        font-size: 12px;
+        background: #edf2e8;
+        color: var(--green);
+        border-radius: 20px;
+        padding: 5px 10px;
+        white-space: nowrap;
+      }
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      button,
+      .link-button {
+        font: inherit;
+        font-size: 14px;
+        padding: 9px 13px;
+        border: 1px solid #c5cdbf;
+        background: #f6f8f1;
+        color: #334b3e;
+        border-radius: 8px;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      button.primary {
+        background: var(--green);
+        border-color: var(--green);
+        color: white;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      button:hover:not(:disabled),
+      .link-button:hover {
+        filter: brightness(0.96);
+      }
+      input,
+      textarea,
+      select {
+        font: inherit;
+        width: 100%;
+        border: 1px solid #cbd1c4;
+        background: #fff;
+        color: inherit;
+        border-radius: 8px;
+        padding: 10px;
+      }
+      textarea {
+        resize: vertical;
+      }
+      label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        margin: 14px 0 7px;
+      }
+      select {
+        max-width: 460px;
+      }
+      a {
+        color: var(--green);
+      }
+      .steps {
+        padding-left: 21px;
+        font-size: 14px;
+        line-height: 1.8;
+      }
+      .note {
+        border-left: 3px solid #94ae8a;
+        padding: 8px 12px;
+        background: #f0f4eb;
+        font-size: 14px;
+      }
+      .account-row {
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+        margin-top: 12px;
+        overflow-wrap: anywhere;
+      }
+      .account-row strong {
+        font-size: 14px;
+      }
+      .account-row small {
+        display: block;
+        margin-top: 5px;
+      }
+      .account-row button {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
+      .test-box {
+        margin-top: 14px;
+        padding: 12px;
+        background: #f2f5ee;
+        border-radius: 10px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        line-height: 1.6;
+        font-size: 14px;
+      }
+      .code {
+        min-height: 220px;
+        font:
+          12px/1.6 ui-monospace,
+          monospace;
+        tab-size: 2;
+      }
+      .notice {
+        position: sticky;
+        bottom: 10px;
+        margin-top: 18px;
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fffef9;
+        box-shadow: 0 3px 16px #283e2418;
+        white-space: pre-wrap;
+      }
+      details {
+        margin-top: 16px;
+      }
+      summary {
+        cursor: pointer;
+        color: var(--green);
+        font-size: 14px;
+      }
+      code {
+        font-size: 12px;
+        overflow-wrap: anywhere;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      @media (max-width: 760px) {
+        body {
+          padding: 15px;
+        }
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        header {
+          align-items: start;
+        }
+        h1 {
+          font-size: 22px;
+        }
+        .card {
+          padding: 17px;
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color: #e1e6da;
+          background: #20271f;
+          --paper: #293126;
+          --line: #46523f;
+          --muted: #a9b5a1;
+          --green: #8bb99d;
+        }
+        input,
+        textarea,
+        select {
+          background: #20271f;
+          border-color: #53634b;
+        }
+        .badge,
+        .note,
+        .test-box {
+          background: #35402f;
+        }
+        button,
+        .link-button {
+          background: #35402f;
+          color: #e1e6da;
+          border-color: #53634b;
+        }
+        button.primary {
+          background: #527b61;
+          color: white;
+        }
+        .notice {
+          background: #293126;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>把 ChatGPT 接到麦麦身边</h1>
+        <div class="muted">登录账号，选好模型，就可以让麦麦用它聊天。</div>
+      </div>
+      <span class="badge" id="connection">正在读取</span>
+    </header>
+    <div class="layout">
+      <div class="stack">
+        <section class="card">
+          <div class="head">
+            <h2>① 连接账号</h2>
+            <span class="badge">Docker 也适用</span>
+          </div>
+          <p id="login-message" class="muted">正在读取账号状态…</p>
+          <div class="buttons">
+            <button class="primary" id="login">Continue with ChatGPT</button
+            ><button id="new">添加另一个账号</button>
+          </div>
+          <div id="pending" hidden>
+            <ol class="steps">
+              <li>打开下面的链接，在 ChatGPT 页面选择账号并授权。</li>
+              <li>
+                最后跳到
+                <code>127.0.0.1</code> 后，复制浏览器地址栏中的完整地址。
+              </li>
+              <li>粘贴到下方，点击完成连接。</li>
+            </ol>
+            <p class="note">
+              Docker 部署时，最后一页可能显示无法连接。这时直接复制地址栏即可。
+            </p>
+            <a
+              id="authorize"
+              class="link-button"
+              target="_blank"
+              rel="noreferrer noopener"
+              >打开 ChatGPT 授权页 ↗</a
+            >
+            <label for="callback">授权后的回调地址（必填）</label
+            ><textarea
+              id="callback"
+              rows="3"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="http://127.0.0.1:端口/auth/callback?code=…"
+            ></textarea>
+            <div class="buttons">
+              <button class="primary" id="finish">完成连接</button
+              ><button id="cancel">取消</button>
+            </div>
+            <p class="muted" id="expiry"></p>
+          </div>
+          <div id="accounts"></div>
+          <div class="buttons">
+            <button id="consent" hidden>允许使用套餐</button
+            ><button id="resume" hidden>额度恢复后继续</button>
+          </div>
+          <details>
+            <summary>账号数据放在哪里？</summary>
+            <p class="muted">
+              授权信息保存在 MaiBot 分配的插件数据目录。Docker
+              重建时保留该目录，就能继续使用已连接的账号。
+            </p>
+            <code id="data-dir"></code>
+            <p>
+              <a
+                href="https://chatgpt.com/settings/usage"
+                target="_blank"
+                rel="noreferrer"
+                >查看 ChatGPT 用量与应用授权 ↗</a
+              >
+            </p>
+          </details>
+        </section>
+        <section class="card">
+          <h2>日常怎么用</h2>
+          <p class="muted">
+            账号连接后，模型会出现在右侧列表。将它加入 MaiBot
+            模型配置，再分配给回复、规划或图片理解任务。
+          </p>
+          <p class="muted">联网搜索和连接时间在「插件配置」中调整。</p>
+        </section>
+      </div>
+      <div class="stack">
+        <section class="card">
+          <div class="head">
+            <h2>② 选择模型</h2>
+            <button id="models">读取模型列表</button>
+          </div>
+          <p class="muted">显示当前账号可用的模型，切换账号后重新读取。</p>
+          <label for="model">本次测试与配置使用的模型（必填）</label
+          ><select id="model">
+            <option value="">先读取模型列表</option>
+          </select>
+          <div class="buttons">
+            <button class="primary" id="test">测试模型</button
+            ><button id="example">生成配置片段</button>
+          </div>
+          <div id="test-result" class="test-box" hidden></div>
+        </section>
+        <section class="card">
+          <div class="head">
+            <h2>③ 加入 MaiBot</h2>
+            <button id="copy">复制配置</button>
+          </div>
+          <p class="muted">
+            把下方服务商和模型段落合并到
+            <code>config/model_config.toml</code
+            >，再将模型名加入需要使用的任务。
+          </p>
+          <textarea
+            id="example-text"
+            class="code"
+            readonly
+            placeholder="选择模型后点击「生成配置片段」。"
+          ></textarea>
+          <p class="muted">
+            服务商客户端类型为 <code>openai_oauth_maimbot</code>，认证方式选择
+            <code>none</code>。账号授权由本插件管理。
+          </p>
+        </section>
+      </div>
+    </div>
+    <div id="notice" role="status" class="notice" hidden></div>
+    <script type="module">
+      const $ = (id) => document.getElementById(id);
+      let state = {},
+        busy = false;
+      function say(text) {
+        $("notice").hidden = !text;
+        $("notice").textContent = text;
+      }
+      async function run(action, args = {}) {
+        if (busy) return;
+        busy = true;
+        document.querySelectorAll("button").forEach((b) => (b.disabled = true));
+        try {
+          say("正在处理…");
+          const result = await maibot.action(action, args);
+          if (action === "example") $("example-text").value = result.text;
+          if (action === "callback") $("callback").value = "";
+          say(result.message || "已完成");
+          await refresh();
+        } catch (e) {
+          say(e.message);
+        } finally {
+          busy = false;
+          document
+            .querySelectorAll("button")
+            .forEach((b) => (b.disabled = false));
+        }
+      }
+      function accountRow(item, active) {
+        const row = document.createElement("div");
+        row.className = "account-row";
+        const name = document.createElement("strong");
+        name.textContent =
+          (item.name || item.email || "ChatGPT 账号") +
+          (active ? " · 当前" : "");
+        const details = document.createElement("small");
+        details.textContent =
+          (item.connected
+            ? item.plan_enabled
+              ? "已连接，可调用模型"
+              : "已登录，等待套餐授权"
+            : "已退出") +
+          " · " +
+          item.client_id.slice(0, 18) +
+          "…";
+        row.append(name, details);
+        const actions = document.createElement("div");
+        actions.className = "buttons";
+        if (item.connected && !active) {
+          const b = document.createElement("button");
+          b.textContent = "设为当前";
+          b.onclick = () =>
+            run("account", { action: "switch", client_id: item.client_id });
+          actions.append(b);
+        }
+        if (item.connected) {
+          const b = document.createElement("button");
+          b.textContent = "退出账号";
+          b.onclick = () => {
+            if (confirm("退出这个 ChatGPT 账号？"))
+              run("account", { action: "logout", client_id: item.client_id });
+          };
+          actions.append(b);
+        }
+        row.append(actions);
+        return row;
+      }
+      async function refresh() {
+        state = await maibot.query("status");
+        const accounts = state.accounts.accounts;
+        const active = accounts.find(
+          (a) => a.client_id === state.accounts.active_client_id,
+        );
+        $("connection").textContent = !state.enabled
+          ? "连接已关闭"
+          : active?.connected
+            ? active.plan_enabled
+              ? "账号已连接"
+              : "等待套餐授权"
+            : "尚未连接";
+        $("login-message").textContent = state.login.message;
+        $("pending").hidden = state.login.status !== "waiting";
+        if (state.login.url) $("authorize").href = state.login.url;
+        else $("authorize").removeAttribute("href");
+        $("accounts").replaceChildren(
+          ...accounts.map((a) =>
+            accountRow(a, a.client_id === state.accounts.active_client_id),
+          ),
+        );
+        $("consent").hidden = !active?.connected || active.plan_enabled;
+        $("resume").hidden = !active?.usage_paused;
+        $("data-dir").textContent = state.data_dir;
+        const selected = $("model").value;
+        $("model").replaceChildren();
+        for (const m of state.models) {
+          const o = document.createElement("option");
+          o.value = m.slug;
+          o.textContent =
+            m.display_name === m.slug
+              ? m.slug
+              : m.display_name + " · " + m.slug;
+          $("model").append(o);
+        }
+        if (!state.models.length) {
+          const o = document.createElement("option");
+          o.value = "";
+          o.textContent = "先读取模型列表";
+          $("model").append(o);
+        }
+        if (state.models.some((m) => m.slug === selected))
+          $("model").value = selected;
+        renderTime();
+      }
+      function renderTime() {
+        if (state.login?.status === "waiting")
+          $("expiry").textContent =
+            "本次授权还剩 " +
+            Math.max(0, Math.ceil(state.login.expires_at - Date.now() / 1000)) +
+            " 秒";
+        const t = state.test || {};
+        $("test-result").hidden = t.status === "idle" || !t.status;
+        if (t.status === "running")
+          $("test-result").textContent =
+            "正在测试 " +
+            t.model +
+            "…\n已用 " +
+            Math.max(0, Math.floor(Date.now() / 1000 - t.started_at)) +
+            " 秒 / 最长 " +
+            state.request_timeout +
+            " 秒";
+        else if (t.status === "success" || t.status === "error")
+          $("test-result").textContent =
+            new Date(t.started_at * 1000).toLocaleString() +
+            " · 用时 " +
+            t.seconds +
+            " 秒\n" +
+            (t.status === "success" ? t.text : t.message);
+      }
+      $("resume").onclick = () => run("resume");
+      $("login").onclick = () => run("login");
+      $("new").onclick = () => run("login", { new: true });
+      $("consent").onclick = () => run("login", { consent: true });
+      $("cancel").onclick = () => run("cancel");
+      $("finish").onclick = () => run("callback", { url: $("callback").value });
+      $("models").onclick = () => run("models");
+      for (const action of ["test", "example"])
+        $(action).onclick = () => {
+          if (!$("model").value) {
+            say("请先读取模型列表并选择模型。");
+            return;
+          }
+          run(action, { model: $("model").value });
+        };
+      $("copy").onclick = async () => {
+        if (!$("example-text").value) {
+          say("请先生成配置片段。");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText($("example-text").value);
+          say("配置已复制。");
+        } catch {
+          $("example-text").focus();
+          $("example-text").select();
+          say("配置已选中，按 Ctrl+C 复制。");
+        }
+      };
+      await refresh().catch((e) => say(e.message));
+      setInterval(renderTime, 1000);
+      let polling = false;
+      setInterval(async () => {
+        if (busy || polling) return;
+        if (
+          state.login?.status === "waiting" ||
+          state.test?.status === "running"
+        ) {
+          polling = true;
+          try {
+            await refresh();
+          } catch (e) {
+            say(e.message);
+          } finally {
+            polling = false;
+          }
+        }
+      }, 2500);
+    </script>
+  </body>
+</html>
