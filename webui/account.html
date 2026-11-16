@@ -6,14 +6,14 @@
     <title>账号与模型</title>
     <style>
       :root {
-        font-family: system-ui, "Microsoft YaHei", sans-serif;
-        color: #393d37;
-        background: #f5f3eb;
-        color-scheme: light;
-        --line: #d8dccf;
-        --paper: #fffef9;
-        --muted: #73796c;
-        --green: #3e6957;
+        font-family: var(--maibot-font-body, system-ui), "Microsoft YaHei", sans-serif;
+        color: var(--maibot-foreground, #393d37);
+        background: transparent;
+        color-scheme: normal;
+        --line: var(--maibot-border, #d8dccf);
+        --paper: var(--maibot-surface, #fffef9);
+        --muted: var(--maibot-muted, #73796c);
+        --green: var(--maibot-primary, #3e6957);
       }
       * {
         box-sizing: border-box;
@@ -73,8 +73,8 @@
       }
       .badge {
         font-size: 12px;
-        background: #edf2e8;
-        color: var(--green);
+        background: color-mix(in srgb, var(--green) 8%, var(--paper));
+        color: inherit;
         border-radius: 20px;
         padding: 5px 10px;
         white-space: nowrap;
@@ -90,9 +90,9 @@
         font: inherit;
         font-size: 14px;
         padding: 9px 13px;
-        border: 1px solid #c5cdbf;
-        background: #f6f8f1;
-        color: #334b3e;
+        border: 1px solid var(--line);
+        background: var(--paper);
+        color: inherit;
         border-radius: 8px;
         cursor: pointer;
         text-decoration: none;
@@ -100,7 +100,7 @@
       button.primary {
         background: var(--green);
         border-color: var(--green);
-        color: white;
+        color: var(--maibot-primary-foreground, #fff);
       }
       button:disabled {
         opacity: 0.55;
@@ -115,8 +115,8 @@
       select {
         font: inherit;
         width: 100%;
-        border: 1px solid #cbd1c4;
-        background: #fff;
+        border: 1px solid var(--line);
+        background: var(--maibot-background, #fff);
         color: inherit;
         border-radius: 8px;
         padding: 10px;
@@ -142,9 +142,9 @@
         line-height: 1.8;
       }
       .note {
-        border-left: 3px solid #94ae8a;
+        border-left: 3px solid var(--green);
         padding: 8px 12px;
-        background: #f0f4eb;
+        background: color-mix(in srgb, var(--green) 8%, var(--paper));
         font-size: 14px;
       }
       .account-row {
@@ -167,7 +167,7 @@
       .test-box {
         margin-top: 14px;
         padding: 12px;
-        background: #f2f5ee;
+        background: color-mix(in srgb, var(--green) 8%, var(--paper));
         border-radius: 10px;
         white-space: pre-wrap;
         overflow-wrap: anywhere;
@@ -188,7 +188,7 @@
         padding: 10px 14px;
         border: 1px solid var(--line);
         border-radius: 10px;
-        background: #fffef9;
+        background: var(--paper);
         box-shadow: 0 3px 16px #283e2418;
         white-space: pre-wrap;
       }
@@ -222,40 +222,6 @@
         }
         .card {
           padding: 17px;
-        }
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          color: #e1e6da;
-          background: #20271f;
-          --paper: #293126;
-          --line: #46523f;
-          --muted: #a9b5a1;
-          --green: #8bb99d;
-        }
-        input,
-        textarea,
-        select {
-          background: #20271f;
-          border-color: #53634b;
-        }
-        .badge,
-        .note,
-        .test-box {
-          background: #35402f;
-        }
-        button,
-        .link-button {
-          background: #35402f;
-          color: #e1e6da;
-          border-color: #53634b;
-        }
-        button.primary {
-          background: #527b61;
-          color: white;
-        }
-        .notice {
-          background: #293126;
         }
       }
     </style>
@@ -586,7 +552,7 @@
             " 秒";
         else if (t.status === "success" || t.status === "error")
           $("test-result").textContent =
-            new Date(t.started_at * 1000).toLocaleString() +
+            t.model + " · " + new Date(t.started_at * 1000).toLocaleString() +
             " · 用时 " +
             t.seconds +
             " 秒\n" +

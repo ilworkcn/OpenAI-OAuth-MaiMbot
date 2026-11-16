@@ -13,7 +13,7 @@ if __package__:
     from .host_models import HostModels, reasoning_params, add_model, assign_tasks
     from .chatgpt_maibot import APP_NAME, CLIENT_TYPE, VERSION
     from .chatgpt_maibot.auth import OpenAIPlanAuth
-    from .chatgpt_maibot.errors import PluginError
+    from .chatgpt_maibot.errors import PluginError, display_error
     from .chatgpt_maibot.provider import PlanProvider
     from .chatgpt_maibot.store import CredentialStore
 else:
@@ -21,7 +21,7 @@ else:
     from host_models import HostModels, reasoning_params, add_model, assign_tasks
     from chatgpt_maibot import APP_NAME, CLIENT_TYPE, VERSION
     from chatgpt_maibot.auth import OpenAIPlanAuth
-    from chatgpt_maibot.errors import PluginError
+    from chatgpt_maibot.errors import PluginError, display_error
     from chatgpt_maibot.provider import PlanProvider
     from chatgpt_maibot.store import CredentialStore
 
@@ -39,7 +39,10 @@ class OAuthPlugin(MaiBotPlugin):
 
     async def on_load(self):
         self.applied_proxy = self.config.network.proxy_url
-        self.client = httpx.AsyncClient(timeout=httpx.Timeout(30, connect=15), follow_redirects=False, proxy=self.applied_proxy or None)
+        try:
+            self.client = httpx.AsyncClient(timeout=httpx.Timeout(30, connect=15), follow_redirects=False, proxy=self.applied_proxy or None)
+        except (ValueError, httpx.InvalidURL):
+            raise PluginError("代理地址格式有误，请检查协议、地址和端口。") from None
         self.store = CredentialStore(self.ctx.paths.data_dir)
         self.auth = OpenAIPlanAuth(self.store, self.client, self.config.advanced.oauth_timeout_seconds)
         self.provider = PlanProvider(self.auth, self.client, timeout_seconds=self.config.advanced.request_timeout_seconds)
@@ -108,8 +111,8 @@ class OAuthPlugin(MaiBotPlugin):
             self.login = {"status": "idle", "message": "本次授权已取消。"}
             raise
         except Exception as error:
-            self.login = {"status": "error", "message": str(error)}
-            self.ctx.logger.warning("ChatGPT 授权失败：%s", error)
+            self.login = {"status": "error", "message": display_error(error)}
+            self.ctx.logger.warning("ChatGPT 授权失败：%s", display_error(error))
 
     @API("callback", description="提交浏览器回调地址", timeout_ms=90000)
     async def callback(self, url: str):
@@ -175,7 +178,7 @@ class OAuthPlugin(MaiBotPlugin):
                 "message_list": [{"role": "user", "content": "请只回复：麦麦，连接成功。"}]})
             self.test.update(status="success", text=result.get("content", ""), usage=result.get("usage", {}))
         except Exception as error:
-            self.test.update(status="error", message=str(error))
+            self.test.update(status="error", message=display_error(error))
         finally:
             self.test["seconds"] = round(time.monotonic() - started, 1)
 

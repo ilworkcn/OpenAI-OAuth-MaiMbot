@@ -4,9 +4,11 @@
 
 **把 ChatGPT 接到麦麦身边。**
 
-登录账号，选好模型，再交给麦麦聊天、规划和看图。
+在 **WebUI** 里连接账号、管理模型和分配任务，再交给麦麦聊天、规划和看图。
 
-![版本](https://img.shields.io/badge/版本-0.1.1-557b62)
+支持 **Docker、NAS 和本机部署**，在自己的浏览器完成授权即可。
+
+![版本](https://img.shields.io/badge/版本-0.1.2-557b62)
 ![MaiBot](https://img.shields.io/badge/MaiBot-1.4.x-65758b)
 ![部署](https://img.shields.io/badge/部署-Docker%20%7C%20NAS%20%7C%20本机-b68b5e)
 [![许可证](https://img.shields.io/badge/许可证-GPL--3.0-7c7193)](LICENSE)

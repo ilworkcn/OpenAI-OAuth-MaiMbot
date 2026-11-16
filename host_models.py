@@ -9,10 +9,10 @@ import httpx
 
 try:
     from .chatgpt_maibot import CLIENT_TYPE
-    from .chatgpt_maibot.errors import PluginError
+    from .chatgpt_maibot.errors import PluginError, redact_credentials
 except ImportError:
     from chatgpt_maibot import CLIENT_TYPE
-    from chatgpt_maibot.errors import PluginError
+    from chatgpt_maibot.errors import PluginError, redact_credentials
 
 EFFORTS = ("", "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra")
 TASK_LABELS = {"replyer": "聊天回复", "planner": "行为规划", "utils": "辅助处理", "utils_small": "轻量辅助", "fast_model": "快速处理", "vlm": "图片理解", "memory": "记忆整理", "learner": "学习", "emoji": "表情理解"}
@@ -72,7 +72,7 @@ def unique_name(base, names):
 
 def catalog(config):
     providers = {p["name"] for p in config.get("api_providers", []) if p.get("client_type") == CLIENT_TYPE}
-    return {"models": [m for m in config.get("models", []) if m.get("api_provider") in providers],
+    return {"models": [{"name": m["name"], "model_identifier": m["model_identifier"], "extra_params": reasoning_params(m.get("extra_params", {}).get("body", {}).get("reasoning", {}).get("effort") or m.get("extra_params", {}).get("reasoning", {}).get("effort", ""))} for m in config.get("models", []) if m.get("api_provider") in providers],
             "tasks": [{"id": key, "label": TASK_LABELS.get(key, key), "models": task.get("model_list", [])}
                       for key, task in config.get("model_task_config", {}).items()
                       if key not in EXCLUDED_TASKS and isinstance(task, dict) and "model_list" in task]}
@@ -123,14 +123,19 @@ class HostModels:
                 await client.post(origin + "/api/webui/auth/logout")
 
     async def request(self, client, method, url, **kwargs):
-        response = await client.request(method, url, **kwargs)
+        try:
+            response = await client.request(method, url, **kwargs)
+        except httpx.HTTPError:
+            raise PluginError("MaiBot 配置接口连接失败，请检查宿主地址和网络。") from None
+        credentials = {"token": getattr(self.settings, "token", ""), "config": kwargs.get("json")}
         if response.is_error:
             try:
-                detail = response.json().get("detail", "")
+                detail = redact_credentials(response.json().get("detail", ""), credentials)
             except ValueError:
                 detail = ""
             raise PluginError(f"MaiBot 配置接口返回 {response.status_code}：{detail or '请检查宿主日志'}")
-        return response.json()
+        result = response.json()
+        return redact_credentials(result, credentials) if method != "GET" else result
 
     async def read(self):
         async with self.connection() as (client, url):

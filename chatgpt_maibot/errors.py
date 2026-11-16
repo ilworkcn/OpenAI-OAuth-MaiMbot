@@ -60,3 +60,39 @@ class OpenAIError(PluginError):
             f"OpenAI HTTP {status}; code={self.code}; param={self.param or '-'}; "
             f"request_id={self.request_id}; shape={self.shape}。{hint}"
         )
+
+
+def display_error(error: Exception) -> str:
+    """业务错误提供操作提示，意外异常仅显示类型。"""
+    if isinstance(error, PluginError):
+        return str(error)
+    return f"操作失败（{type(error).__name__}），请检查连接配置后重试。"
+
+
+def redact_credentials(value, source=None):
+    """隐藏配置接口回显的凭据，保留配置校验说明。"""
+    secrets = []
+    def collect(item):
+        if isinstance(item, dict):
+            for key, child in item.items():
+                if any(word in key.lower() for word in ("token", "password", "api_key", "secret")) and isinstance(child, str) and child:
+                    secrets.append(child)
+                else:
+                    collect(child)
+        elif isinstance(item, list):
+            for child in item:
+                collect(child)
+    collect(source)
+    def clean(item):
+        if isinstance(item, str):
+            for secret in sorted(secrets, key=len, reverse=True):
+                item = item.replace(secret, "[已隐藏]")
+            item = re.sub(r"https?://[^/\s@]+@", "http://[已隐藏]@", item)
+            item = re.sub(r"(?:sk-[A-Za-z0-9_.-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)", "[已隐藏]", item)
+            return item
+        if isinstance(item, list):
+            return [clean(child) for child in item]
+        if isinstance(item, dict):
+            return {key: clean(child) for key, child in item.items()}
+        return item
+    return clean(value)

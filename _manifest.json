@@ -3,7 +3,7 @@
   "plugin_type": "provider",
   "id": "ilworkcn.openai-oauth",
   "name": "OpenAI OAuth · 麦麦账号连接",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "在 WebUI 授权 ChatGPT 账号，让麦麦使用账号中的聊天模型；支持 Docker、图片理解与工具调用。",
   "author": {
     "name": "ilworkcn",
@@ -40,7 +40,10 @@
       "version_spec": ">=4.26,<5"
     }
   ],
-  "capabilities": [],
+  "capabilities": [
+    "custom_pages",
+    "structured_arguments"
+  ],
   "urls": {
     "repository": "https://github.com/ilworkcn/OpenAI-OAuth-MaiMbot"
   },
@@ -55,7 +58,13 @@
       "client_type": "openai_oauth_maimbot",
       "name": "ChatGPT 账号授权",
       "description": "使用已授权的 ChatGPT 账号调用模型",
-      "version": "0.1.1"
+      "version": "0.1.2"
     }
-  ]
+  ],
+  "display": {
+    "icon": {
+      "type": "local",
+      "value": "assets/icon.png"
+    }
+  }
 }
