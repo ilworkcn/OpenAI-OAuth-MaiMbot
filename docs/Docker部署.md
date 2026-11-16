@@ -46,3 +46,11 @@ python -m pip install -r /MaiMBot/plugins/OpenAI-OAuth-MaiMbot/requirements.txt
 | 插件加载提示缺少模块 | 在 MaiBot 实际使用的 Python 环境安装依赖，然后重新加载插件 |
 
 插件使用 HTTPX，容器可通过 `HTTPS_PROXY`、`HTTP_PROXY` 和 `NO_PROXY` 配置代理。
+
+## 自动添加模型
+
+同容器部署默认连接 `http://127.0.0.1:8001`，并复用宿主的 WebUI 登录凭据。插件根据 MaiBot 运行环境中的 Bot ID 选择对应实例。使用自定义端口时，在插件高级设置修改宿主 WebUI 地址。
+
+远程宿主填写完整的目标地址，例如 `http://服务器:8001/api/host/bots/目标BotID/proxy`，并填写该 WebUI 的登录密码。
+
+在“账号与模型”页面添加模型后，再单独勾选要使用它的任务。保存和热重载均由宿主原生接口处理。

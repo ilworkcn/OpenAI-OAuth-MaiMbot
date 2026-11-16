@@ -10,6 +10,7 @@ from maibot_sdk import API, LLMProvider, MaiBotPlugin
 
 if __package__:
     from .config import OAuthConfig
+    from .host_models import HostModels, reasoning_params, add_model, assign_tasks
     from .chatgpt_maibot import APP_NAME, CLIENT_TYPE, VERSION
     from .chatgpt_maibot.auth import OpenAIPlanAuth
     from .chatgpt_maibot.errors import PluginError
@@ -17,6 +18,7 @@ if __package__:
     from .chatgpt_maibot.store import CredentialStore
 else:
     from config import OAuthConfig
+    from host_models import HostModels, reasoning_params, add_model, assign_tasks
     from chatgpt_maibot import APP_NAME, CLIENT_TYPE, VERSION
     from chatgpt_maibot.auth import OpenAIPlanAuth
     from chatgpt_maibot.errors import PluginError
@@ -58,9 +60,10 @@ class OAuthPlugin(MaiBotPlugin):
         schema = super().get_webui_config_schema(**kwargs)
         schema["sections"]["plugin"].update(title="模型连接", description="账号授权与模型测试请打开插件的「账号与模型」页面。")
         schema["sections"]["advanced"].update(title="连接时间", description="默认值适合大多数部署，需要时再调整。", collapsed=True)
+        schema["sections"]["host"].update(title="自动添加模型", description="使用宿主原生配置接口保存并重载。同机部署自动读取登录凭据。", collapsed=True)
         schema["layout"] = {"type": "tabs", "tabs": [
             {"id": "connection", "title": "模型连接", "sections": ["plugin"], "order": 0},
-            {"id": "advanced", "title": "高级设置", "sections": ["advanced"], "order": 1}]}
+            {"id": "advanced", "title": "高级设置", "sections": ["host", "advanced"], "order": 1}]}
         return schema
 
     @API("status", description="账号、授权进度与模型测试结果")
@@ -134,7 +137,8 @@ class OAuthPlugin(MaiBotPlugin):
         return {"models": self.models, "message": f"已读取 {len(self.models)} 个可用模型。"}
 
     @API("test", description="向所选模型发送一条测试消息")
-    async def start_test(self, model: str):
+    async def start_test(self, model: str, effort: str = ""):
+        reasoning_params(effort)
         if not self.config.plugin.enabled:
             raise PluginError("请先在插件配置中启用模型连接。")
         if self.auth._login_task and not self.auth._login_task.done():
@@ -142,13 +146,13 @@ class OAuthPlugin(MaiBotPlugin):
         if self.test_task and not self.test_task.done():
             raise PluginError("模型测试正在运行，请稍等。")
         self.test = {"status": "running", "model": model, "started_at": time.time()}
-        self.test_task = asyncio.create_task(self._test(model))
+        self.test_task = asyncio.create_task(self._test(model, effort))
         return {"message": "正在测试模型…"}
 
-    async def _test(self, model):
+    async def _test(self, model, effort=""):
         started = time.monotonic()
         try:
-            result = await self.handle_llm_provider("response", {"model_info": {"model_identifier": model},
+            result = await self.handle_llm_provider("response", {"model_info": {"model_identifier": model, "extra_params": reasoning_params(effort)},
                 "message_list": [{"role": "user", "content": "请只回复：麦麦，连接成功。"}]})
             self.test.update(status="success", text=result.get("content", ""), usage=result.get("usage", {}))
         except Exception as error:
@@ -157,7 +161,8 @@ class OAuthPlugin(MaiBotPlugin):
             self.test["seconds"] = round(time.monotonic() - started, 1)
 
     @API("example", description="生成所选模型的 MaiBot 配置片段")
-    async def example(self, model: str):
+    async def example(self, model: str, effort: str = ""):
+        reasoning_params(effort)
         if model not in {item["slug"] for item in self.models}:
             raise PluginError("请先读取模型列表并选择一个模型。")
         quoted = json.dumps(model, ensure_ascii=False)
@@ -188,7 +193,24 @@ price_periods = []
 # model_list = ["chatgpt-oauth"]
 # hard_timeout = {timeout}.0
 '''
+        if effort:
+            text += "\n[models.extra_params.reasoning]\neffort = " + json.dumps(effort) + "\n"
         return {"text": text}
+
+    @API("host_models", description="读取已添加的模型和任务", timeout_ms=60000)
+    async def host_models(self):
+        return await HostModels(self.config.host).read()
+
+    @API("add_model", description="添加模型并保存推理强度", timeout_ms=60000)
+    async def add_to_host(self, model: str, effort: str = ""):
+        reasoning_params(effort)
+        if model not in {m["slug"] for m in self.models}:
+            raise PluginError("请先读取账号模型列表并选择模型。")
+        return await HostModels(self.config.host).save(lambda config: add_model(config, model, effort, self.config.advanced.request_timeout_seconds))
+
+    @API("assign_tasks", description="将已添加的模型用于选中任务", timeout_ms=60000)
+    async def assign_to_tasks(self, model_name: str, tasks: list[str]):
+        return await HostModels(self.config.host).save(lambda config: assign_tasks(config, model_name, tasks))
 
     @LLMProvider(CLIENT_TYPE, name="ChatGPT 账号授权", description="使用已授权的 ChatGPT 账号调用模型", version=VERSION)
     async def handle_llm_provider(self, operation: str, request: dict[str, Any]):

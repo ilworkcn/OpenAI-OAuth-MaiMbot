@@ -3,7 +3,8 @@ from maibot_sdk import Field, PluginConfigBase
 
 
 def setting(label, **kwargs):
-    return Field(json_schema_extra={"label": label, "hint": kwargs.get("description", "")}, **kwargs)
+    extra = kwargs.pop("json_schema_extra", {})
+    return Field(json_schema_extra={"label": label, "hint": kwargs.get("description", ""), **extra}, **kwargs)
 
 
 class PluginSettings(PluginConfigBase):
@@ -20,6 +21,13 @@ class AdvancedSettings(PluginConfigBase):
     request_timeout_seconds: int = setting("模型请求超时（秒）", default=240, ge=30, le=900, description="包括模型推理和生成回复的总时间；MaiBot 对应模型任务的超时建议设为相同或更长。")
 
 
+class HostSettings(PluginConfigBase):
+    __ui_label__ = "自动添加模型"
+    base_url: str = setting("宿主 WebUI 地址", default="http://127.0.0.1:8001", description="同容器通常沿用默认值；远程填写目标 Bot 的 WebUI 地址，包含 /api/host/bots/目标ID/proxy。")
+    token: str = setting("WebUI 登录密码（选填）", default="", description="同机自动读取宿主凭据；远程部署填写目标 WebUI 的登录密码。", json_schema_extra={"x-widget": "password", "input_type": "password"})
+
+
 class OAuthConfig(PluginConfigBase):
     plugin: PluginSettings = Field(default_factory=PluginSettings)
+    host: HostSettings = Field(default_factory=HostSettings)
     advanced: AdvancedSettings = Field(default_factory=AdvancedSettings)

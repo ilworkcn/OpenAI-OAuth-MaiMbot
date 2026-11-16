@@ -1,7 +1,8 @@
 {
   "schema_version": 2,
   "required_capabilities": [
-    "custom_pages"
+    "custom_pages",
+    "structured_arguments"
   ],
   "workspace_title": "OpenAI OAuth · 账号连接",
   "pages": [
@@ -15,6 +16,11 @@
       "queries": {
         "status": {
           "api": "status",
+          "version": "1",
+          "parameters": {}
+        },
+        "host_models": {
+          "api": "host_models",
           "version": "1",
           "parameters": {}
         }
@@ -74,6 +80,9 @@
             "model": {
               "type": "string",
               "required": true
+            },
+            "effort": {
+              "type": "string"
             }
           }
         },
@@ -84,6 +93,9 @@
             "model": {
               "type": "string",
               "required": true
+            },
+            "effort": {
+              "type": "string"
             }
           }
         },
@@ -91,6 +103,37 @@
           "api": "resume",
           "version": "1",
           "parameters": {}
+        },
+        "add_model": {
+          "api": "add_model",
+          "version": "1",
+          "parameters": {
+            "model": {
+              "type": "string",
+              "required": true
+            },
+            "effort": {
+              "type": "string"
+            }
+          }
+        },
+        "assign_tasks": {
+          "api": "assign_tasks",
+          "version": "1",
+          "parameters": {
+            "model_name": {
+              "type": "string",
+              "required": true
+            },
+            "tasks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "required": true,
+              "max_items": 30
+            }
+          }
         }
       }
     }

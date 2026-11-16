@@ -355,38 +355,65 @@
           ><select id="model">
             <option value="">先读取模型列表</option>
           </select>
+          <label for="effort">推理强度</label>
+          <select id="effort">
+            <option value="">模型默认</option>
+            <option value="none">关闭推理 · none</option>
+            <option value="minimal">极低 · minimal</option>
+            <option value="low">低 · low</option>
+            <option value="medium">中 · medium</option>
+            <option value="high">高 · high</option>
+            <option value="xhigh">更高 · xhigh</option>
+            <option value="max">最高 · max</option>
+            <option value="ultra">超高 · ultra</option>
+          </select>
+          <p class="muted">
+            用于本次测试和添加到 MaiBot
+            的模型。各模型支持的档位不同，可先测试；选择默认时由模型决定。
+          </p>
           <div class="buttons">
             <button class="primary" id="test">测试模型</button
-            ><button id="example">生成配置片段</button>
+            ><button id="add_model">添加到 MaiBot / 保存强度</button>
           </div>
           <div id="test-result" class="test-box" hidden></div>
         </section>
         <section class="card">
           <div class="head">
-            <h2>③ 加入 MaiBot</h2>
-            <button id="copy">复制配置</button>
+            <h2>③ 分配任务</h2>
+            <button id="read-host">读取当前配置</button>
           </div>
           <p class="muted">
-            把下方服务商和模型段落合并到
-            <code>config/model_config.toml</code
-            >，再将模型名加入需要使用的任务。
+            添加模型后，在这里选择用途。勾选任务的模型列表会替换为下方模型，其余任务保留原配置。
           </p>
-          <textarea
-            id="example-text"
-            class="code"
-            readonly
-            placeholder="选择模型后点击「生成配置片段」。"
-          ></textarea>
-          <p class="muted">
-            服务商客户端类型为 <code>openai_oauth_maimbot</code>，认证方式选择
-            <code>none</code>。账号授权由本插件管理。
+          <p id="host-message" class="note">
+            自动添加使用原生配置接口，连接信息在插件配置 → 高级设置。
           </p>
+          <label for="installed">已添加的模型</label
+          ><select id="installed">
+            <option value="">先读取当前配置</option>
+          </select>
+          <div id="tasks" class="stack" style="margin: 12px 0"></div>
+          <button class="primary" id="assign">应用到选中任务</button>
+          <details>
+            <summary>手动填写配置</summary>
+            <div class="buttons">
+              <button id="example">生成配置片段</button
+              ><button id="copy">复制配置</button>
+            </div>
+            <textarea
+              id="example-text"
+              class="code"
+              readonly
+              placeholder="选择模型后生成配置片段。"
+            ></textarea>
+          </details>
         </section>
       </div>
     </div>
     <div id="notice" role="status" class="notice" hidden></div>
     <script type="module">
       const $ = (id) => document.getElementById(id);
+      let installedModels = [];
       let state = {},
         busy = false;
       function say(text) {
@@ -401,8 +428,14 @@
           say("正在处理…");
           const result = await maibot.action(action, args);
           if (action === "example") $("example-text").value = result.text;
+          if (action === "add_model" || action === "assign_tasks") {
+            await readHost(result.name);
+          }
+          if (action === "add_model") modelSelection();
           if (action === "callback") $("callback").value = "";
-          say(result.message || "已完成");
+          say(
+            [result.message || "已完成", ...(result.warnings || [])].join("\n"),
+          );
           await refresh();
         } catch (e) {
           say(e.message);
@@ -530,14 +563,82 @@
       $("cancel").onclick = () => run("cancel");
       $("finish").onclick = () => run("callback", { url: $("callback").value });
       $("models").onclick = () => run("models");
-      for (const action of ["test", "example"])
+      for (const action of ["test", "example", "add_model"])
         $(action).onclick = () => {
           if (!$("model").value) {
             say("请先读取模型列表并选择模型。");
             return;
           }
-          run(action, { model: $("model").value });
+          run(action, { model: $("model").value, effort: $("effort").value });
         };
+      async function readHost(selected) {
+        const data = await maibot.query("host_models");
+        installedModels = data.models;
+        const previous = selected || $("installed").value;
+        $("installed").replaceChildren();
+        for (const model of data.models) {
+          const option = document.createElement("option");
+          option.value = model.name;
+          option.textContent = model.name;
+          $("installed").append(option);
+        }
+        if (data.models.some((m) => m.name === previous))
+          $("installed").value = previous;
+        $("tasks").replaceChildren();
+        for (const task of data.tasks) {
+          const label = document.createElement("label");
+          label.style.margin = "0";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = task.id;
+          checkbox.style.width = "auto";
+          label.append(
+            checkbox,
+            document.createTextNode(
+              " " +
+                task.label +
+                " · 当前：" +
+                (task.models.join("、") || "未分配"),
+            ),
+          );
+          $("tasks").append(label);
+        }
+        $("host-message").textContent = data.models.length
+          ? "已添加 " + data.models.length + " 个账号模型。选择任务后点击应用。"
+          : "尚未添加账号模型，请在上方选择模型并添加。";
+      }
+      function modelSelection() {
+        const saved = installedModels.find(
+          (m) => m.model_identifier === $("model").value,
+        );
+        $("add_model").textContent = saved
+          ? "已添加 · 保存推理强度"
+          : "添加到 MaiBot";
+        $("effort").value =
+          saved?.extra_params?.body?.reasoning?.effort ||
+          saved?.extra_params?.reasoning?.effort ||
+          "";
+      }
+      $("model").onchange = modelSelection;
+      $("read-host").onclick = async () => {
+        try {
+          await readHost();
+          modelSelection();
+          say("已读取当前配置。");
+        } catch (e) {
+          say(e.message);
+        }
+      };
+      $("assign").onclick = () => {
+        const tasks = [...$("tasks").querySelectorAll("input:checked")].map(
+          (input) => input.value,
+        );
+        if (!$("installed").value || !tasks.length) {
+          say("请选择已添加的模型，并勾选要使用它的任务。");
+          return;
+        }
+        run("assign_tasks", { model_name: $("installed").value, tasks });
+      };
       $("copy").onclick = async () => {
         if (!$("example-text").value) {
           say("请先生成配置片段。");
