@@ -30,10 +30,14 @@ def test_add_update_and_assign_keep_existing_settings():
     assert config["api_providers"][0] == before["api_providers"][0]
     assert config["model_task_config"] == before["model_task_config"]
     assert config["api_providers"][1]["name"] == "ChatGPT-OAuth-2"
+    assert config["api_providers"][1]["max_retry"] == 2
+    assert config["api_providers"][1]["retry_interval"] == 4
+    config["api_providers"][1]["max_retry"] = 3
     model = config["models"][-1]
     model["extra_params"]["body"] = {"reasoning": {"effort": "low"}, "custom": True}
     assert add_model(config, "test-model", "medium", 240) == name
     assert len(config["models"]) == 2
+    assert config["api_providers"][1]["max_retry"] == 3
     assert model["extra_params"] == {"reasoning": {"effort": "medium"}, "body": {"custom": True}}
     assign_tasks(config, name, ["replyer"])
     assert config["model_task_config"]["replyer"] == {"model_list": [name], "temperature": .7, "hard_timeout": 80}
@@ -94,6 +98,7 @@ async def test_reasoning_test_and_manual_config_agree(plugin, monkeypatch):
     await plugin.test_task
     assert captured[0]["reasoning"] == {"effort": "high"}
     manual = tomllib.loads((await plugin.example("test-model", "high"))["text"])
+    assert manual["api_providers"][0]["max_retry"] == 2
     assert manual["models"][0]["extra_params"]["reasoning"]["effort"] == "high"
     assert not reasoning_params("")
     with pytest.raises(PluginError):

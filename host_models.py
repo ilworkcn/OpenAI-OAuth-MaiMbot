@@ -40,7 +40,7 @@ def add_model(config, model, effort, timeout):
         names = {p["name"] for p in providers}
         name = unique_name("ChatGPT-OAuth", names)
         provider = {"name": name, "base_url": "https://api.openai.com/v1", "api_key": "",
-                    "auth_type": "none", "client_type": CLIENT_TYPE, "max_retry": 0,
+                    "auth_type": "none", "client_type": CLIENT_TYPE, "max_retry": 2,
                     "timeout": timeout, "retry_interval": 4}
         providers.append(provider)
     models = config.setdefault("models", [])

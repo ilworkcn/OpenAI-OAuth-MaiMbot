@@ -8,7 +8,7 @@
 
 支持 **Docker、NAS 和本机部署**，在自己的浏览器完成授权即可。
 
-![版本](https://img.shields.io/badge/版本-0.1.2-557b62)
+![版本](https://img.shields.io/badge/版本-0.1.3-557b62)
 ![MaiBot](https://img.shields.io/badge/MaiBot-1.4.x-65758b)
 ![部署](https://img.shields.io/badge/部署-Docker%20%7C%20NAS%20%7C%20本机-b68b5e)
 [![许可证](https://img.shields.io/badge/许可证-GPL--3.0-7c7193)](LICENSE)
@@ -24,7 +24,7 @@
 账号授权、模型测试和任务分配，都在「账号与模型」这一页完成。下面是 Docker 实机上的页面，背景和配色跟随 MaiBot 主题。
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ilworkcn/OpenAI-OAuth-MaiMbot/v0.1.2/assets/webui-demo.png" alt="账号与模型实机演示：连接账号、选择模型、测试回复与分配任务" width="1000" />
+  <img src="https://raw.githubusercontent.com/ilworkcn/OpenAI-OAuth-MaiMbot/v0.1.3/assets/webui-demo.png" alt="账号与模型实机演示：连接账号、选择模型、测试回复与分配任务" width="1000" />
 </p>
 
 **连接账号 → 读取模型 → 测试并添加 → 选择任务。** 添加模型后，再决定把它用于聊天回复、行为规划还是图片理解。

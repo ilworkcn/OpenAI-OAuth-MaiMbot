@@ -9,7 +9,7 @@ def setting(label, **kwargs):
 
 class PluginSettings(PluginConfigBase):
     __ui_label__ = "模型连接"
-    config_version: str = Field(default="0.1.2", json_schema_extra={"hidden": True})
+    config_version: str = Field(default="0.1.3", json_schema_extra={"hidden": True})
     enabled: bool = setting("启用模型连接", default=True, description="让 MaiBot 通过已授权的 ChatGPT 账号调用模型。账号授权在插件页面完成。")
     enable_web_search: bool = setting("允许模型联网搜索", default=False, description="回复时可使用模型自带的网页搜索，是否可用取决于账号和所选模型。")
     enable_tool_controls: bool = setting("使用工具选择参数", default=False, description="开启后传递模型配置中的 tool_choice 和 parallel_tool_calls。常规工具调用保持可用。")

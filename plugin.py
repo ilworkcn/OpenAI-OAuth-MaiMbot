@@ -195,7 +195,7 @@ base_url = "https://api.openai.com/v1"
 api_key = ""
 auth_type = "none"
 client_type = "{CLIENT_TYPE}"
-max_retry = 0
+max_retry = 2
 timeout = {timeout}
 retry_interval = 4
 
